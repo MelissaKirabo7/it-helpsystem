@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as MyTicketsRouteImport } from './routes/my-tickets'
@@ -18,6 +19,11 @@ import { Route as TicketsTicketIdRouteImport } from './routes/tickets.$ticketId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArchiveRoute = ArchiveRouteImport.update({
@@ -43,6 +49,7 @@ const TicketsTicketIdRoute = TicketsTicketIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/my-tickets': typeof MyTicketsRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/my-tickets': typeof MyTicketsRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/my-tickets': typeof MyTicketsRoute
@@ -66,12 +75,24 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/archive' | '/dashboard' | '/my-tickets' | '/tickets/$ticketId'
+    | '/'
+    | '/admin'
+    | '/archive'
+    | '/dashboard'
+    | '/my-tickets'
+    | '/tickets/$ticketId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/archive' | '/dashboard' | '/my-tickets' | '/tickets/$ticketId'
+  to:
+    | '/'
+    | '/admin'
+    | '/archive'
+    | '/dashboard'
+    | '/my-tickets'
+    | '/tickets/$ticketId'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/archive'
     | '/dashboard'
     | '/my-tickets'
@@ -80,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ArchiveRoute: typeof ArchiveRoute
   DashboardRoute: typeof DashboardRoute
   MyTicketsRoute: typeof MyTicketsRoute
@@ -93,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/archive': {
@@ -128,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ArchiveRoute: ArchiveRoute,
   DashboardRoute: DashboardRoute,
   MyTicketsRoute: MyTicketsRoute,
