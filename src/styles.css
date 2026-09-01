@@ -5,17 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * ServeDesk IT Ticketing — design system.
+ * Deep forest green chrome on a warm cream canvas, soft rounded cards,
+ * lime accent for active nav / key metrics. All colors are oklch tokens.
  */
 
 @theme inline {
@@ -26,6 +18,10 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -59,77 +55,103 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-status-new: var(--status-new);
+  --color-status-new-soft: var(--status-new-soft);
+  --color-status-progress: var(--status-progress);
+  --color-status-progress-soft: var(--status-progress-soft);
+  --color-status-pending: var(--status-pending);
+  --color-status-pending-soft: var(--status-pending-soft);
+  --color-status-resolved: var(--status-resolved);
+  --color-status-resolved-soft: var(--status-resolved-soft);
+  --color-prio-low: var(--prio-low);
+  --color-prio-medium: var(--prio-medium);
+  --color-prio-high: var(--prio-high);
+  --color-prio-critical: var(--prio-critical);
+
+  --shadow-card: 0 1px 2px oklch(0.28 0.03 165 / 6%), 0 12px 28px -18px oklch(0.28 0.03 165 / 22%);
+  --shadow-lift: 0 18px 40px -22px oklch(0.28 0.03 165 / 35%);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 1rem;
+
+  --background: oklch(0.968 0.011 95);
+  --foreground: oklch(0.24 0.028 163);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.24 0.028 163);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --popover-foreground: oklch(0.24 0.028 163);
+
+  --primary: oklch(0.31 0.042 165);
+  --primary-foreground: oklch(0.98 0.012 100);
+  --secondary: oklch(0.938 0.016 100);
+  --secondary-foreground: oklch(0.3 0.04 165);
+  --muted: oklch(0.945 0.012 100);
+  --muted-foreground: oklch(0.53 0.02 160);
+  --accent: oklch(0.88 0.16 105);
+  --accent-foreground: oklch(0.26 0.035 165);
+  --destructive: oklch(0.55 0.2 26);
+  --destructive-foreground: oklch(0.98 0.01 100);
+
+  --border: oklch(0.9 0.014 120);
+  --input: oklch(0.9 0.014 120);
+  --ring: oklch(0.42 0.055 165);
+
+  --surface: oklch(0.955 0.014 98);
+  --surface-foreground: oklch(0.3 0.03 163);
+
+  --chart-1: oklch(0.42 0.07 165);
+  --chart-2: oklch(0.78 0.15 100);
+  --chart-3: oklch(0.62 0.13 232);
+  --chart-4: oklch(0.72 0.16 55);
+  --chart-5: oklch(0.55 0.18 20);
+
+  --status-new: oklch(0.5 0.13 245);
+  --status-new-soft: oklch(0.94 0.03 245);
+  --status-progress: oklch(0.55 0.15 65);
+  --status-progress-soft: oklch(0.95 0.04 75);
+  --status-pending: oklch(0.5 0.14 300);
+  --status-pending-soft: oklch(0.95 0.03 300);
+  --status-resolved: oklch(0.48 0.11 158);
+  --status-resolved-soft: oklch(0.94 0.04 158);
+
+  --prio-low: oklch(0.55 0.06 200);
+  --prio-medium: oklch(0.6 0.12 90);
+  --prio-high: oklch(0.6 0.17 45);
+  --prio-critical: oklch(0.52 0.21 22);
+
+  --sidebar: oklch(0.26 0.035 165);
+  --sidebar-foreground: oklch(0.93 0.015 100);
+  --sidebar-primary: oklch(0.88 0.16 105);
+  --sidebar-primary-foreground: oklch(0.24 0.035 165);
+  --sidebar-accent: oklch(0.32 0.04 165);
+  --sidebar-accent-foreground: oklch(0.96 0.012 100);
+  --sidebar-border: oklch(0.34 0.035 165);
+  --sidebar-ring: oklch(0.88 0.16 105);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: oklch(0.19 0.025 165);
+  --foreground: oklch(0.96 0.012 100);
+  --card: oklch(0.24 0.03 165);
+  --card-foreground: oklch(0.96 0.012 100);
+  --popover: oklch(0.24 0.03 165);
+  --popover-foreground: oklch(0.96 0.012 100);
+  --primary: oklch(0.88 0.16 105);
+  --primary-foreground: oklch(0.22 0.03 165);
+  --secondary: oklch(0.3 0.035 165);
+  --secondary-foreground: oklch(0.96 0.012 100);
+  --muted: oklch(0.3 0.035 165);
+  --muted-foreground: oklch(0.75 0.02 130);
+  --accent: oklch(0.88 0.16 105);
+  --accent-foreground: oklch(0.22 0.03 165);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --surface: oklch(0.23 0.03 165);
+  --surface-foreground: oklch(0.95 0.012 100);
 }
 
 @layer base {
@@ -140,5 +162,21 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+}
+
+@utility panel {
+  background-color: var(--color-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
 }
