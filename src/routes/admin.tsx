@@ -108,7 +108,7 @@ function AdminPage() {
           <div className="mt-5 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={byPriority} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82}>
+                <Pie data={byPriority} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} isAnimationActive={false}>
                   {byPriority.map((_, i) => (
                     <Cell key={i} fill={pieColors[i]} />
                   ))}

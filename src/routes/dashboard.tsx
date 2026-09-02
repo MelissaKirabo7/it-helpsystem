@@ -171,7 +171,7 @@ function DashboardPage() {
                       {t.title}
                     </Link>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono">{t.id}</span>· {t.submitter} · {t.room} ·{" "}
+                      <span className="font-mono whitespace-nowrap">{t.id}</span>· {t.submitter} · {t.room} ·{" "}
                       {relativeTime(t.createdAt)}
                     </div>
                   </td>
