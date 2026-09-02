@@ -75,7 +75,7 @@ function TicketDetail() {
       setResolveError("Resolution notes are mandatory — describe the fix in at least 15 characters.");
       return;
     }
-    resolve(ticket.id, resolution);
+    resolve(ticket!.id, resolution);
     setResolveError("");
     setResolving(false);
     setResolution("");
