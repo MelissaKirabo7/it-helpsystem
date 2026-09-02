@@ -94,7 +94,7 @@ function SubmitPage() {
           </div>
 
           <div className="mt-6 space-y-5">
-            <Field label="Summary" error={errors.title} hint="One line an IT technician can scan.">
+            <Field label="Summary" error={errors["title"]} hint="One line an IT technician can scan.">
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -118,7 +118,7 @@ function SubmitPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Room / location" error={errors.room}>
+              <Field label="Room / location" error={errors["room"]}>
                 <input value={room} onChange={(e) => setRoom(e.target.value)} className={inputCls} />
               </Field>
             </div>
@@ -143,7 +143,7 @@ function SubmitPage() {
               </div>
             </Field>
 
-            <Field label="What is happening?" error={errors.description}>
+            <Field label="What is happening?" error={errors["description"]}>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -252,8 +252,8 @@ function Field({
   children,
 }: {
   label: string;
-  hint?: string;
-  error?: string;
+  hint?: string | undefined;
+  error?: string | undefined;
   children: React.ReactNode;
 }) {
   return (

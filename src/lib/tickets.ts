@@ -132,7 +132,7 @@ export const CURRENT_USER = {
   workstation: "WS-FIN-214-07",
 };
 
-export const CURRENT_TECH = TECHNICIANS[0];
+export const CURRENT_TECH = TECHNICIANS[0]!;
 
 export const SEED_TICKETS: Ticket[] = [
   {
