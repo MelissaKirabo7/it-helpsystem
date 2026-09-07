@@ -1,0 +1,11 @@
+REVOKE EXECUTE ON FUNCTION public.log_ticket_insert() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.log_ticket_update() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.log_note_insert() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_staff(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.claim_initial_admin() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reopen_ticket(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_staff(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_initial_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.reopen_ticket(uuid, text) TO authenticated;
