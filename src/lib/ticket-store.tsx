@@ -208,11 +208,6 @@ export function useTicketActions() {
       if (input.files?.length) {
         await uploadAttachments(input.files, { ticketId: ticket.id, userId: user.id });
       }
-      void fetch("/api/public/ticket-email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "created", ticketId: ticket.id }),
-      }).catch(() => undefined);
       return ticket;
     },
     onSuccess: invalidate,
@@ -286,11 +281,6 @@ export function useTicketActions() {
         })
         .eq("id", v.ticketId);
       if (error) throw error;
-      void fetch("/api/public/ticket-email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "resolved", ticketId: v.ticketId }),
-      }).catch(() => undefined);
     },
     onSuccess: invalidate,
   });
