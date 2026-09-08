@@ -4,7 +4,7 @@ import { PriorityTag, SlaMeter, StatusBadge } from "@/components/ticket-ui";
 import { useTickets } from "@/lib/ticket-store";
 import { CURRENT_USER, relativeTime } from "@/lib/tickets";
 
-export const Route = createFileRoute("/my-tickets")({
+export const Route = createFileRoute("/_authenticated/my-tickets")({
   head: () => ({
     meta: [
       { title: "My IT Requests — ServeDesk IT Ticketing" },

@@ -6,7 +6,7 @@ import { PriorityTag, StatCard } from "@/components/ticket-ui";
 import { useTickets } from "@/lib/ticket-store";
 import { CATEGORIES, relativeTime, techName, type Category } from "@/lib/tickets";
 
-export const Route = createFileRoute("/archive")({
+export const Route = createFileRoute("/_authenticated/archive")({
   head: () => ({
     meta: [
       { title: "Resolved Ticket Archive — ServeDesk IT Ticketing" },

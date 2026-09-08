@@ -17,7 +17,7 @@ import { Initials, StatCard } from "@/components/ticket-ui";
 import { useTickets } from "@/lib/ticket-store";
 import { CATEGORIES, PRIORITIES, SLA_HOURS, TECHNICIANS, slaState } from "@/lib/tickets";
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
       { title: "Admin Console — ServeDesk IT Ticketing" },
