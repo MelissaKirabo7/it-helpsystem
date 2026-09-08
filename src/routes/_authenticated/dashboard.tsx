@@ -18,7 +18,7 @@ import {
 } from "@/lib/tickets";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Active Ticket Queue — ServeDesk IT Ticketing" },
