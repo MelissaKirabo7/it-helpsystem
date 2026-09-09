@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PriorityTag, SlaMeter, StatusBadge } from "@/components/ticket-ui";
+import { useAuth } from "@/lib/auth";
 import { useTickets } from "@/lib/ticket-store";
-import { CURRENT_USER, relativeTime } from "@/lib/tickets";
+import { relativeTime } from "@/lib/tickets";
 
 export const Route = createFileRoute("/_authenticated/my-tickets")({
   head: () => ({
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/my-tickets")({
       { property: "og:title", content: "My IT Requests — ServeDesk IT Ticketing" },
       {
         property: "og:description",
-        content: "A submitter-scoped view of your own tickets — other employees' tickets stay private.",
+        content: "A personal view of the tickets you authored — other people's tickets stay private.",
       },
     ],
   }),
@@ -24,9 +25,11 @@ export const Route = createFileRoute("/_authenticated/my-tickets")({
 });
 
 function MyTickets() {
-  const { tickets } = useTickets();
+  const { user } = useAuth();
+  const { tickets, isLoading } = useTickets();
+  // Always scoped to the signed-in account, technicians and admins included.
   const mine = tickets
-    .filter((t) => t.submitterEmail === CURRENT_USER.email)
+    .filter((t) => t.submitterId === user?.id)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
@@ -51,7 +54,7 @@ function MyTickets() {
             className="panel p-5 transition-shadow hover:shadow-lift"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs text-muted-foreground">{t.id}</span>
+              <span className="font-mono text-xs text-muted-foreground">{t.ref}</span>
               <StatusBadge status={t.status} />
             </div>
             <p className="mt-3 font-display text-base font-semibold">{t.title}</p>
@@ -70,7 +73,7 @@ function MyTickets() {
             )}
           </Link>
         ))}
-        {mine.length === 0 && (
+        {!isLoading && mine.length === 0 && (
           <p className="text-sm text-muted-foreground">You have not submitted any requests yet.</p>
         )}
       </div>
