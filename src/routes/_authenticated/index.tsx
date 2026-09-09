@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, Clock, Send } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Send } from "lucide-react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
+import { ScreenshotInput } from "@/components/ScreenshotInput";
 import { PriorityTag, StatusBadge } from "@/components/ticket-ui";
-import { useTickets } from "@/lib/ticket-store";
+import { useAuth } from "@/lib/auth";
+import { useTicketActions, useTickets } from "@/lib/ticket-store";
 import {
   CATEGORIES,
-  CURRENT_USER,
   PRIORITIES,
   SLA_HOURS,
   relativeTime,
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/")({
       {
         name: "description",
         content:
-          "Submit an IT issue from your workstation in three clicks: pick a category, describe the problem, and track the ticket to resolution.",
+          "Submit an IT issue from your workstation in three clicks: pick a category, describe the problem, attach a screenshot and track the ticket to resolution.",
       },
       { property: "og:title", content: "Log an IT Request — ServeDesk IT Ticketing" },
       {
@@ -42,20 +43,23 @@ const schema = z.object({
 });
 
 function SubmitPage() {
-  const { createTicket, tickets } = useTickets();
+  const { profile, user } = useAuth();
+  const { tickets } = useTickets();
+  const { createTicket } = useTicketActions();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [room, setRoom] = useState(CURRENT_USER.room);
+  const [room, setRoom] = useState(profile?.room ?? "");
   const [category, setCategory] = useState<Category>("Hardware");
   const [priority, setPriority] = useState<Priority>("Medium");
+  const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [created, setCreated] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ id: string; ref: string } | null>(null);
 
-  const mine = tickets.filter((t) => t.submitterEmail === CURRENT_USER.email).slice(0, 3);
+  const mine = tickets.filter((t) => t.submitterId === user?.id).slice(0, 3);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = schema.safeParse({ title, description, room });
+    const parsed = schema.safeParse({ title, description, room: room || profile?.room || "" });
     if (!parsed.success) {
       const next: Record<string, string> = {};
       for (const issue of parsed.error.issues) next[String(issue.path[0])] = issue.message;
@@ -63,10 +67,15 @@ function SubmitPage() {
       return;
     }
     setErrors({});
-    const ticket = createTicket({ ...parsed.data, category, priority });
-    setCreated(ticket.id);
-    setTitle("");
-    setDescription("");
+    try {
+      const ticket = await createTicket.mutateAsync({ ...parsed.data, category, priority, files });
+      setCreated({ id: ticket.id, ref: ticket.ref });
+      setTitle("");
+      setDescription("");
+      setFiles([]);
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : "Could not submit the ticket" });
+    }
   }
 
   return (
@@ -75,20 +84,20 @@ function SubmitPage() {
         <form onSubmit={submit} className="panel p-6 md:p-7">
           <div className="rounded-2xl bg-surface p-4">
             <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
-              Identity auto-filled from directory sign-in
+              Identity auto-filled from your account
             </p>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
               <div>
                 <dt className="text-xs text-muted-foreground">Name</dt>
-                <dd className="font-medium">{CURRENT_USER.name}</dd>
+                <dd className="font-medium">{profile?.full_name || "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Email</dt>
-                <dd className="truncate font-medium">{CURRENT_USER.email}</dd>
+                <dd className="truncate font-medium">{profile?.email || user?.email}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Workstation</dt>
-                <dd className="font-medium">{CURRENT_USER.workstation}</dd>
+                <dd className="font-medium">{profile?.workstation || "—"}</dd>
               </div>
             </dl>
           </div>
@@ -149,33 +158,43 @@ function SubmitPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 maxLength={2000}
-                placeholder="Include what you tried, any error text, and when it started."
+                placeholder="Include what you tried, any error text, and when it started. Paste a screenshot with Ctrl/Cmd + V."
                 className={cn(inputCls, "h-auto resize-y py-3")}
               />
             </Field>
+
+            <ScreenshotInput files={files} onChange={setFiles} />
           </div>
+
+          {errors["form"] && (
+            <p className="mt-4 text-sm font-medium text-destructive">{errors["form"]}</p>
+          )}
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              disabled={createTicket.isPending}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              <Send className="size-4" /> Submit ticket
+              {createTicket.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              Submit ticket
             </button>
             <p className="text-xs text-muted-foreground">
-              You will get an on-screen confirmation and a ticket ID by email.
+              Your ticket is saved permanently and you can follow it under My Requests.
             </p>
           </div>
 
           {created && (
             <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl bg-status-resolved-soft p-4 text-sm text-status-resolved">
               <CheckCircle2 className="size-5" />
-              <span className="font-medium">
-                Ticket {created} created. A confirmation email is on its way.
-              </span>
+              <span className="font-medium">Ticket {created.ref} created.</span>
               <Link
                 to="/tickets/$ticketId"
-                params={{ ticketId: created }}
+                params={{ ticketId: created.id }}
                 className="ml-auto rounded-full bg-status-resolved px-3 py-1.5 text-xs font-semibold text-card"
               >
                 View ticket
@@ -199,7 +218,7 @@ function SubmitPage() {
                   className="block rounded-2xl border border-border p-4 transition-colors hover:bg-muted"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{t.id}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{t.ref}</span>
                     <StatusBadge status={t.status} />
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm font-medium">{t.title}</p>
@@ -224,8 +243,8 @@ function SubmitPage() {
               {[
                 "You submit the form — the ticket lands in the IT active queue.",
                 "A technician claims it and moves it to In Progress.",
-                "You see public updates on the ticket timeline.",
-                "On resolution you get an email with the fix applied.",
+                "You see public updates on the timeline and can reply there.",
+                "On resolution you are notified, with 5 days to reopen it.",
               ].map((step, i) => (
                 <li key={step} className="flex gap-3">
                   <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">
