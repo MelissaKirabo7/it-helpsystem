@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { PriorityTag, StatCard } from "@/components/ticket-ui";
 import { useTickets } from "@/lib/ticket-store";
-import { CATEGORIES, relativeTime, techName, type Category } from "@/lib/tickets";
+import { CATEGORIES, relativeTime, type Category } from "@/lib/tickets";
 
 export const Route = createFileRoute("/_authenticated/archive")({
   head: () => ({
@@ -96,12 +96,12 @@ function ArchivePage() {
               className="block rounded-2xl border border-border p-4 transition-colors hover:bg-muted/60"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-muted-foreground">{t.id}</span>
+                <span className="font-mono text-xs text-muted-foreground">{t.ref}</span>
                 <span className="font-medium">{t.title}</span>
                 <PriorityTag priority={t.priority} />
                 <span className="ml-auto text-xs text-muted-foreground">
                   resolved {relativeTime(t.resolvedAt ?? t.updatedAt)} by{" "}
-                  {techName(t.assigneeId) ?? "IT"}
+                  {t.assigneeName ?? "IT"}
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{t.resolutionNotes}</p>

@@ -3,15 +3,14 @@ import { useMemo, useState } from "react";
 import { ArrowUpRight, Filter, Inbox } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Initials, PriorityTag, SlaMeter, StatCard, StatusBadge } from "@/components/ticket-ui";
-import { useTickets } from "@/lib/ticket-store";
+import { useAuth } from "@/lib/auth";
+import { useTicketActions, useTickets } from "@/lib/ticket-store";
 import {
+  ACTIVE_STATUSES,
   CATEGORIES,
-  CURRENT_TECH,
   PRIORITIES,
-  STATUSES,
   relativeTime,
   slaState,
-  techName,
   type Category,
   type Priority,
   type Status,
@@ -47,7 +46,9 @@ const quickFilters: { key: Quick; label: string }[] = [
 ];
 
 function DashboardPage() {
-  const { active, assign } = useTickets();
+  const { user, profile } = useAuth();
+  const { active } = useTickets();
+  const { assign } = useTicketActions();
   const [quick, setQuick] = useState<Quick>("all");
   const [status, setStatus] = useState<Status | "any">("any");
   const [priority, setPriority] = useState<Priority | "any">("any");
@@ -57,8 +58,8 @@ function DashboardPage() {
   const prioRank: Record<Priority, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 
   const rows = useMemo(() => {
-    let list = active.filter((t) => {
-      if (quick === "mine" && t.assigneeId !== CURRENT_TECH.id) return false;
+    const list = active.filter((t) => {
+      if (quick === "mine" && t.assigneeId !== user?.id) return false;
       if (quick === "unassigned" && t.assigneeId) return false;
       if (quick === "overdue" && !slaState(t).overdue) return false;
       if (status !== "any" && t.status !== status) return false;
@@ -66,13 +67,12 @@ function DashboardPage() {
       if (category !== "any" && t.category !== category) return false;
       return true;
     });
-    list = [...list].sort((a, b) =>
+    return [...list].sort((a, b) =>
       sort === "priority"
         ? prioRank[a.priority] - prioRank[b.priority]
         : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    return list;
-  }, [active, quick, status, priority, category, sort]);
+  }, [active, quick, status, priority, category, sort, user?.id]);
 
   const overdue = active.filter((t) => slaState(t).overdue).length;
 
@@ -132,7 +132,11 @@ function DashboardPage() {
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Filter className="size-4 text-muted-foreground" />
-            <Select value={status} onChange={(v) => setStatus(v as Status | "any")} options={["any", ...STATUSES]} />
+            <Select
+              value={status}
+              onChange={(v) => setStatus(v as Status | "any")}
+              options={["any", ...ACTIVE_STATUSES]}
+            />
             <Select
               value={priority}
               onChange={(v) => setPriority(v as Priority | "any")}
@@ -171,8 +175,8 @@ function DashboardPage() {
                       {t.title}
                     </Link>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono whitespace-nowrap">{t.id}</span>· {t.submitter} · {t.room} ·{" "}
-                      {relativeTime(t.createdAt)}
+                      <span className="font-mono whitespace-nowrap">{t.ref}</span>· {t.submitter} ·{" "}
+                      {t.room} · {relativeTime(t.createdAt)}
                     </div>
                   </td>
                   <td className="px-3 py-4 text-muted-foreground">{t.category}</td>
@@ -185,12 +189,19 @@ function DashboardPage() {
                   <td className="px-3 py-4">
                     {t.assigneeId ? (
                       <span className="flex items-center gap-2">
-                        <Initials label={techName(t.assigneeId)!} className="size-7" />
-                        <span className="text-xs">{techName(t.assigneeId)}</span>
+                        <Initials label={t.assigneeName ?? "IT"} className="size-7" />
+                        <span className="text-xs">{t.assigneeName}</span>
                       </span>
                     ) : (
                       <button
-                        onClick={() => assign(t.id, CURRENT_TECH.id)}
+                        onClick={() =>
+                          assign.mutate({
+                            ticketId: t.id,
+                            assigneeId: user?.id ?? null,
+                            assigneeName: profile?.full_name || user?.email || "IT",
+                            status: t.status === "New" ? "In Progress" : t.status,
+                          })
+                        }
                         className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/8"
                       >
                         Claim
@@ -205,7 +216,7 @@ function DashboardPage() {
                       to="/tickets/$ticketId"
                       params={{ ticketId: t.id }}
                       className="inline-flex size-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted"
-                      aria-label={`Open ${t.id}`}
+                      aria-label={`Open ${t.ref}`}
                     >
                       <ArrowUpRight className="size-4" />
                     </Link>

@@ -1,14 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, EyeOff, Globe, Lock, MapPin, Monitor, User } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
-import { Initials, PriorityTag, SlaMeter, StatusBadge } from "@/components/ticket-ui";
-import { useTickets } from "@/lib/ticket-store";
 import {
-  STATUSES,
-  TECHNICIANS,
+  CheckCircle2,
+  EyeOff,
+  Globe,
+  Lock,
+  MapPin,
+  Monitor,
+  RotateCcw,
+  User,
+} from "lucide-react";
+import { AppShell } from "@/components/AppShell";
+import { AttachmentGallery } from "@/components/AttachmentGallery";
+import { ScreenshotInput } from "@/components/ScreenshotInput";
+import { Initials, PriorityTag, SlaMeter, StatusBadge } from "@/components/ticket-ui";
+import { useAuth } from "@/lib/auth";
+import { useStaff, useTicket, useTicketActions } from "@/lib/ticket-store";
+import {
+  ACTIVE_STATUSES,
+  REOPEN_WINDOW_DAYS,
   relativeTime,
-  techName,
+  reopenWindow,
   type NoteVisibility,
   type Status,
 } from "@/lib/tickets";
@@ -21,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
       {
         name: "description",
         content:
-          "Full ticket workspace: assignment, status lifecycle, SLA timer, internal work log and public updates for the submitter.",
+          "Full ticket workspace: assignment, status lifecycle, SLA timer, screenshots, internal work log and public updates for the submitter.",
       },
       { property: "og:title", content: "Ticket detail — ServeDesk IT Ticketing" },
       {
@@ -35,59 +47,91 @@ export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
 
 function TicketDetail() {
   const { ticketId } = Route.useParams();
-  const { tickets, role, assign, setStatus, addNote, resolve } = useTickets();
-  const ticket = tickets.find((t) => t.id === ticketId);
-  const isStaff = role !== "submitter";
+  const { user, isStaff } = useAuth();
+  const { data, isLoading } = useTicket(ticketId);
+  const { data: staff } = useStaff();
+  const { assign, setStatus, addNote, resolve, reopen } = useTicketActions();
 
   const [note, setNote] = useState("");
-  const [visibility, setVisibility] = useState<NoteVisibility>("internal");
+  const [noteFiles, setNoteFiles] = useState<File[]>([]);
+  const [visibility, setVisibility] = useState<NoteVisibility>(isStaff ? "internal" : "public");
   const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState("");
   const [resolveError, setResolveError] = useState("");
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
+  const [error, setError] = useState("");
 
-  if (!ticket) {
+  if (isLoading) {
+    return (
+      <AppShell title="Loading ticket…" crumb="Tickets">
+        <div className="panel h-64 animate-pulse" />
+      </AppShell>
+    );
+  }
+
+  if (!data) {
     return (
       <AppShell title="Ticket not found" crumb="Tickets">
         <div className="panel p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            No ticket matches <span className="font-mono">{ticketId}</span>.
+            No ticket matches this link, or you do not have access to it.
           </p>
           <Link
-            to="/dashboard"
+            to="/my-tickets"
             className="mt-4 inline-block rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
-            Back to active queue
+            Back to my requests
           </Link>
         </div>
       </AppShell>
     );
   }
 
-  const visibleNotes = ticket.notes.filter((n) => isStaff || n.visibility === "public");
+  const { ticket, notes, events, attachments } = data;
+  const isAuthor = ticket.submitterId === user?.id;
+  const reopenState = reopenWindow(ticket);
+  const ticketFiles = attachments.filter((a) => !a.noteId);
 
   const timeline = [
-    ...ticket.events.map((e) => ({ id: e.id, at: e.at, kind: "event" as const, label: e.label })),
-    ...visibleNotes.map((n) => ({ id: n.id, at: n.at, kind: "note" as const, note: n })),
+    ...events.map((e) => ({ id: e.id, at: e.at, kind: "event" as const, label: e.label })),
+    ...notes.map((n) => ({ id: n.id, at: n.at, kind: "note" as const, note: n })),
   ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 
-  function submitResolution() {
+  async function submitNote() {
+    setError("");
+    try {
+      await addNote.mutateAsync({
+        ticketId: ticket.id,
+        body: note,
+        visibility: isStaff ? visibility : "public",
+        files: noteFiles,
+      });
+      setNote("");
+      setNoteFiles([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not post the update");
+    }
+  }
+
+  async function submitResolution() {
     if (resolution.trim().length < 15) {
       setResolveError("Resolution notes are mandatory — describe the fix in at least 15 characters.");
       return;
     }
-    resolve(ticket!.id, resolution);
+    await resolve.mutateAsync({ ticketId: ticket.id, notes: resolution });
     setResolveError("");
     setResolving(false);
     setResolution("");
   }
 
   return (
-    <AppShell title={ticket.title} crumb={`Tickets · ${ticket.id}`}>
+    <AppShell title={ticket.title} crumb={`Tickets · ${ticket.ref}`}>
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-5">
           <section className="panel p-6">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs text-muted-foreground">{ticket.id}</span>
+              <span className="font-mono text-xs text-muted-foreground">{ticket.ref}</span>
               <StatusBadge status={ticket.status} />
               <PriorityTag priority={ticket.priority} />
               <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -98,11 +142,12 @@ function TicketDetail() {
               </span>
             </div>
             <p className="mt-4 text-sm leading-relaxed whitespace-pre-line">{ticket.description}</p>
+            <AttachmentGallery items={ticketFiles} />
 
             <dl className="mt-6 grid gap-4 border-t border-border/70 pt-5 text-sm sm:grid-cols-3">
               <Meta icon={User} label="Submitter" value={`${ticket.submitter} · ${ticket.department}`} />
-              <Meta icon={MapPin} label="Location" value={ticket.room} />
-              <Meta icon={Monitor} label="Workstation" value={ticket.workstation} />
+              <Meta icon={MapPin} label="Location" value={ticket.room || "—"} />
+              <Meta icon={Monitor} label="Workstation" value={ticket.workstation || "—"} />
             </dl>
 
             {ticket.resolutionNotes && (
@@ -111,6 +156,64 @@ function TicketDetail() {
                   <CheckCircle2 className="size-4" /> Resolution notes
                 </p>
                 <p className="mt-2 text-sm text-status-resolved">{ticket.resolutionNotes}</p>
+              </div>
+            )}
+
+            {isAuthor && ticket.status === "Resolved" && (
+              <div className="mt-5 rounded-2xl border border-border p-4">
+                {reopenState.open ? (
+                  reopenOpen ? (
+                    <div>
+                      <p className="text-sm font-semibold">Why does this need more work?</p>
+                      <textarea
+                        value={reopenReason}
+                        onChange={(e) => setReopenReason(e.target.value)}
+                        rows={3}
+                        className="mt-2 w-full resize-y rounded-xl border border-border bg-card p-3 text-sm outline-none focus:ring-2 focus:ring-ring/15"
+                        placeholder="The problem came back this morning…"
+                      />
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={async () => {
+                            setError("");
+                            try {
+                              await reopen.mutateAsync({
+                                ticketId: ticket.id,
+                                reason: reopenReason,
+                              });
+                              setReopenOpen(false);
+                              setReopenReason("");
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : "Could not reopen");
+                            }
+                          }}
+                          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                        >
+                          Reopen ticket
+                        </button>
+                        <button
+                          onClick={() => setReopenOpen(false)}
+                          className="rounded-full border border-border px-4 py-2 text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setReopenOpen(true)}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+                    >
+                      <RotateCcw className="size-4" /> Reopen this ticket —{" "}
+                      {reopenState.daysLeft} day{reopenState.daysLeft === 1 ? "" : "s"} left
+                    </button>
+                  )
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    The {REOPEN_WINDOW_DAYS}-day reopen window has closed. Please submit a new
+                    request if the issue returns.
+                  </p>
+                )}
               </div>
             )}
           </section>
@@ -158,54 +261,69 @@ function TicketDetail() {
                         <span className="text-muted-foreground">{relativeTime(item.note.at)}</span>
                       </div>
                       <p className="mt-2 text-sm leading-relaxed">{item.note.body}</p>
+                      <AttachmentGallery
+                        items={attachments.filter((a) => a.noteId === item.note.id)}
+                      />
                     </div>
                   )}
                 </li>
               ))}
             </ol>
 
-            {isStaff && ticket.status !== "Resolved" && (
-              <div className="mt-6 rounded-2xl border border-border p-4">
-                <div className="flex flex-wrap gap-2">
-                  {(["internal", "public"] as NoteVisibility[]).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setVisibility(v)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                        visibility === v
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {v === "internal" ? <EyeOff className="size-3.5" /> : <Globe className="size-3.5" />}
-                      {v === "internal" ? "Internal work log" : "Reply to submitter"}
-                    </button>
-                  ))}
-                </div>
+            {(isStaff || isAuthor) && ticket.status !== "Resolved" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitNote();
+                }}
+                className="mt-6 rounded-2xl border border-border p-4"
+              >
+                {isStaff && (
+                  <div className="flex flex-wrap gap-2">
+                    {(["internal", "public"] as NoteVisibility[]).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setVisibility(v)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                          visibility === v
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {v === "internal" ? <EyeOff className="size-3.5" /> : <Globe className="size-3.5" />}
+                        {v === "internal" ? "Internal work log" : "Reply to submitter"}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   maxLength={1500}
                   placeholder={
-                    visibility === "internal"
-                      ? "Visible to the IT department only…"
-                      : "This text is emailed to the submitter…"
+                    !isStaff
+                      ? "Add more context for the IT team — paste a screenshot with Ctrl/Cmd + V…"
+                      : visibility === "internal"
+                        ? "Visible to the IT department only…"
+                        : "This update is shown to the submitter…"
                   }
                   className="mt-3 w-full resize-y rounded-xl border border-border bg-card p-3 text-sm outline-none focus:border-ring/60 focus:ring-2 focus:ring-ring/15"
                 />
+                <div className="mt-3">
+                  <ScreenshotInput files={noteFiles} onChange={setNoteFiles} label="Attach screenshot" />
+                </div>
+                {error && <p className="mt-2 text-xs font-medium text-destructive">{error}</p>}
                 <button
-                  disabled={note.trim().length < 3}
-                  onClick={() => {
-                    addNote(ticket.id, note, visibility);
-                    setNote("");
-                  }}
+                  type="submit"
+                  disabled={note.trim().length < 3 || addNote.isPending}
                   className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
                 >
-                  Add {visibility === "internal" ? "note" : "response"}
+                  {isStaff && visibility === "internal" ? "Add note" : "Post reply"}
                 </button>
-              </div>
+              </form>
             )}
           </section>
         </div>
@@ -220,7 +338,7 @@ function TicketDetail() {
               <SlaMeter ticket={ticket} />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Due {new Date(ticket.updatedAt).toLocaleString()}
+              Last activity {relativeTime(ticket.updatedAt)}
             </p>
           </section>
 
@@ -233,13 +351,20 @@ function TicketDetail() {
               </label>
               <select
                 value={ticket.assigneeId ?? ""}
-                onChange={(e) => assign(ticket.id, e.target.value || null)}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  assign.mutate({
+                    ticketId: ticket.id,
+                    assigneeId: id,
+                    assigneeName: staff?.find((s) => s.id === id)?.name ?? null,
+                  });
+                }}
                 className="mt-2 h-11 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/15"
               >
                 <option value="">Unassigned</option>
-                {TECHNICIANS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} — {t.team}
+                {(staff ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
                   </option>
                 ))}
               </select>
@@ -248,10 +373,14 @@ function TicketDetail() {
                 Status
               </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                {STATUSES.map((s) => (
+                {[...ACTIVE_STATUSES, "Resolved"].map((s) => (
                   <button
                     key={s}
-                    onClick={() => (s === "Resolved" ? setResolving(true) : setStatus(ticket.id, s as Status))}
+                    onClick={() =>
+                      s === "Resolved"
+                        ? setResolving(true)
+                        : setStatus.mutate({ ticketId: ticket.id, status: s as Status })
+                    }
                     className={cn(
                       "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
                       ticket.status === s
@@ -273,7 +402,7 @@ function TicketDetail() {
                     value={resolution}
                     onChange={(e) => setResolution(e.target.value)}
                     rows={4}
-                    placeholder="Explain the fix applied — this is emailed to the submitter and kept for audit."
+                    placeholder="Explain the fix applied — the submitter is notified and this is kept for audit."
                     className="mt-3 w-full resize-y rounded-xl border border-border bg-card p-3 text-sm outline-none focus:ring-2 focus:ring-ring/15"
                   />
                   {resolveError && (
@@ -281,7 +410,7 @@ function TicketDetail() {
                   )}
                   <div className="mt-3 flex gap-2">
                     <button
-                      onClick={submitResolution}
+                      onClick={() => void submitResolution()}
                       className="rounded-full bg-status-resolved px-4 py-2 text-sm font-semibold text-card"
                     >
                       Resolve &amp; archive
@@ -307,19 +436,20 @@ function TicketDetail() {
           <section className="panel p-6">
             <h2 className="font-display text-lg font-semibold">Handling</h2>
             <div className="mt-4 flex items-center gap-3">
-              <Initials label={techName(ticket.assigneeId) ?? "Un assigned"} />
+              <Initials label={ticket.assigneeName ?? "Un assigned"} />
               <div>
-                <p className="text-sm font-medium">{techName(ticket.assigneeId) ?? "Unassigned"}</p>
+                <p className="text-sm font-medium">{ticket.assigneeName ?? "Unassigned"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {ticket.assigneeId
-                    ? TECHNICIANS.find((t) => t.id === ticket.assigneeId)?.team
-                    : "Waiting on triage"}
+                  {ticket.assigneeId ? "IT support" : "Waiting on triage"}
                 </p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Last activity {relativeTime(ticket.updatedAt)}
-            </p>
+            {ticket.reopenedCount > 0 && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Reopened {ticket.reopenedCount} time{ticket.reopenedCount === 1 ? "" : "s"} by the
+                submitter.
+              </p>
+            )}
           </section>
         </div>
       </div>
