@@ -14,8 +14,8 @@ import {
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
 import { Initials, StatCard } from "@/components/ticket-ui";
-import { useTickets } from "@/lib/ticket-store";
-import { CATEGORIES, PRIORITIES, SLA_HOURS, TECHNICIANS, slaState } from "@/lib/tickets";
+import { useStaff, useTickets } from "@/lib/ticket-store";
+import { CATEGORIES, PRIORITIES, SLA_HOURS, slaState } from "@/lib/tickets";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -45,6 +45,7 @@ const routing = [
 
 function AdminPage() {
   const { tickets, active, archive } = useTickets();
+  const { data: staff } = useStaff();
 
   const byCategory = useMemo(
     () =>
@@ -138,14 +139,14 @@ function AdminPage() {
         <section className="panel p-6">
           <h2 className="font-display text-lg font-semibold">Technician workload</h2>
           <div className="mt-4 space-y-3">
-            {TECHNICIANS.map((tech) => {
+            {(staff ?? []).map((tech) => {
               const load = active.filter((t) => t.assigneeId === tech.id).length;
               return (
                 <div key={tech.id} className="flex items-center gap-3 rounded-2xl border border-border p-3">
                   <Initials label={tech.name} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{tech.name}</p>
-                    <p className="text-xs text-muted-foreground">{tech.team}</p>
+                    <p className="text-xs text-muted-foreground">IT support</p>
                   </div>
                   <div className="w-28">
                     <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -161,6 +162,11 @@ function AdminPage() {
                 </div>
               );
             })}
+            {(staff ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No technicians yet — grant the technician role to a teammate.
+              </p>
+            )}
           </div>
         </section>
 
