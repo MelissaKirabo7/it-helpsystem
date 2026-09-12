@@ -42,7 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (uid: string) => {
+  const load = useCallback(async (u: User) => {
+    const uid = u.id;
     const [{ data: prof }, { data: roleRows }] = await Promise.all([
       supabase
         .from("profiles")
@@ -51,7 +52,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
     ]);
-    setProfile((prof as Profile | null) ?? null);
+    let profileRow = (prof as Profile | null) ?? null;
+    if (!profileRow) {
+      // First visit after confirming the email: build the profile from signup details.
+      const meta = (u.user_metadata ?? {}) as Record<string, string>;
+      const { data: created } = await supabase
+        .from("profiles")
+        .insert({
+          id: uid,
+          full_name: meta["full_name"] ?? u.email ?? "",
+          email: u.email ?? "",
+          department: meta["department"] ?? "",
+          room: meta["room"] ?? "",
+          workstation: meta["workstation"] ?? "",
+        })
+        .select("id, full_name, email, department, room, workstation")
+        .maybeSingle();
+      profileRow = (created as Profile | null) ?? null;
+    }
+    setProfile(profileRow);
     let list = (roleRows ?? []).map((r) => r.role as Role);
     if (list.length === 0) {
       // First ever account becomes admin + technician, everyone else a submitter.
@@ -88,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
-    void load(user.id);
+    void load(user);
   }, [user, load]);
 
   const value = useMemo<AuthState>(() => {
@@ -110,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
       },
       refreshProfile: async () => {
-        if (user) await load(user.id);
+        if (user) await load(user);
       },
     };
   }, [loading, user, session, profile, roles, load]);

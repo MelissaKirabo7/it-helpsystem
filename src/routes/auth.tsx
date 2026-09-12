@@ -82,19 +82,18 @@ function AuthPage() {
         const { data, error: err } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
-          options: { emailRedirectTo: window.location.origin },
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: {
+              full_name: parsed.data.fullName,
+              department: parsed.data.department,
+              room: parsed.data.room,
+              workstation: parsed.data.workstation,
+            },
+          },
         });
         if (err) throw err;
-        if (data.user && data.session) {
-          await supabase.from("profiles").insert({
-            id: data.user.id,
-            full_name: parsed.data.fullName,
-            email: parsed.data.email,
-            department: parsed.data.department,
-            room: parsed.data.room,
-            workstation: parsed.data.workstation,
-          });
-        } else {
+        if (!data.session) {
           setInfo("Check your inbox to confirm your email, then sign in.");
         }
       }
