@@ -14,8 +14,8 @@ import {
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
 import { Initials, StatCard } from "@/components/ticket-ui";
-import { useTickets } from "@/lib/ticket-store";
-import { CATEGORIES, PRIORITIES, SLA_HOURS, TECHNICIANS, slaState } from "@/lib/tickets";
+import { useStaff, useTickets } from "@/lib/ticket-store";
+import { CATEGORIES, PRIORITIES, SLA_HOURS, slaState } from "@/lib/tickets";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -45,6 +45,7 @@ const routing = [
 
 function AdminPage() {
   const { tickets, active, archive } = useTickets();
+  const { data: staff } = useStaff();
 
   const byCategory = useMemo(
     () =>
