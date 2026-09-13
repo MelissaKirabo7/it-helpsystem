@@ -1,6 +1,4 @@
-# You are an expert AI system architect and UI UX designer
 
-You are an expert AI system architect and UI/UX designer. Your task is to design and generate a complete, production-ready IT Ticketing System interface by strictly following the provided requirements document and matching the visual style, layout, and component structures shown in the attached UI design screenshots.
 
 
 
