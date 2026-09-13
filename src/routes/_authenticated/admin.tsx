@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
 import { Initials, StatCard } from "@/components/ticket-ui";
+import { UserManagement } from "@/components/UserManagement";
 import { useStaff, useTickets } from "@/lib/ticket-store";
 import { CATEGORIES, PRIORITIES, SLA_HOURS, slaState } from "@/lib/tickets";
 
@@ -208,6 +209,10 @@ function AdminPage() {
             internal notes, admins additionally manage routing, roles and retention.
           </p>
         </section>
+      </div>
+
+      <div className="mt-5">
+        <UserManagement />
       </div>
     </AppShell>
   );
